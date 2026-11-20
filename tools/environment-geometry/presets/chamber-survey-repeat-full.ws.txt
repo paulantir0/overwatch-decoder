@@ -1,0 +1,74 @@
+settings
+{
+	main
+	{
+		Mode Name: "Chamber surface survey"
+	}
+	lobby
+	{
+		Max Team 1 Players: 1
+		Max Team 2 Players: 0
+	}
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Chamber
+			}
+		}
+	}
+}
+
+variables {
+    global:
+        0: OverwatchDecoderSurvey
+        1: OverwatchDecoderStart
+        2: OverwatchDecoderEnd
+        3: OverwatchDecoderHit
+        4: OverwatchDecoderNormal
+        5: OverwatchDecoderYaw
+        6: OverwatchDecoderPitch
+        7: OverwatchDecoderRow
+        8: OverwatchDecoderCol
+        9: OverwatchDecoderIndex
+}
+
+//Strict optimizations enabled
+rule ("Overwatch Decoder Chamber ray survey 49") {
+    event {
+        Ongoing - Each Player;
+        All;
+        All;
+    }
+    conditions {
+        Current Map == Map(Workshop Chamber);
+        Event Player == Host Player;
+        Has Spawned(Event Player) == True;
+        Is Button Held(Event Player, Button(Interact)) == True;
+        Global.OverwatchDecoderSurvey < 6;
+    }
+    actions {
+        Set Global Variable(OverwatchDecoderStart, Eye Position(Event Player));
+        Set Global Variable(OverwatchDecoderYaw, Horizontal Facing Angle Of(Event Player));
+        Set Global Variable(OverwatchDecoderPitch, Vertical Facing Angle Of(Event Player));
+        Set Global Variable(OverwatchDecoderIndex, 0);
+        Log To Inspector(Custom String("OWD3 ID {0} MAP {1} PLAYER {2}", Global.OverwatchDecoderSurvey, Current Map, Custom String("{0} ORIGIN {1}", Position Of(Event Player), Global.OverwatchDecoderStart)));
+        For Global Variable(OverwatchDecoderRow, 0, 7, 1);
+            For Global Variable(OverwatchDecoderCol, 0, 7, 1);
+                Set Global Variable(OverwatchDecoderEnd, Add(Global.OverwatchDecoderStart, Multiply(Direction From Angles(Add(Global.OverwatchDecoderYaw, Multiply(Subtract(Global.OverwatchDecoderCol, 3), 10)), Add(Global.OverwatchDecoderPitch, Multiply(Subtract(Global.OverwatchDecoderRow, 3), 10))), 25)));
+                Set Global Variable(OverwatchDecoderHit, Ray Cast Hit Position(Global.OverwatchDecoderStart, Global.OverwatchDecoderEnd, Empty Array, Empty Array, False));
+                Set Global Variable(OverwatchDecoderNormal, Ray Cast Hit Normal(Global.OverwatchDecoderStart, Global.OverwatchDecoderEnd, Empty Array, Empty Array, False));
+                Log To Inspector(Custom String("OWD3 RAY {0} END {1} HIT {2}", Global.OverwatchDecoderIndex, Global.OverwatchDecoderEnd, Global.OverwatchDecoderHit));
+                Log To Inspector(Custom String("OWD3 NORMAL {0} {1}", Global.OverwatchDecoderIndex, Global.OverwatchDecoderNormal));
+                Modify Global Variable(OverwatchDecoderIndex, Add, 1);
+                Wait(0.1, Ignore Condition);
+            End;
+        End;
+        Log To Inspector(Custom String("OWD3 ID {0} DONE {1}", Global.OverwatchDecoderSurvey, Global.OverwatchDecoderIndex));
+        Modify Global Variable(OverwatchDecoderSurvey, Add, 1);
+        Wait Until(Not(Is Button Held(Event Player, Button(Interact))), 99999);
+        Abort If(Is Button Held(Event Player, Button(Interact)));
+    }
+}

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=70.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "overwatch-decoder"
+version = "0.1.0"
+description = "Decode Overwatch entity state from read-only process-memory recordings and replay it in the browser"
+requires-python = ">=3.11"
+# The decoder, replay tools and overwatch_decoder helpers use only the standard library.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools]
+packages = ["overwatch_decoder"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "tools/entity-decoder", "tools/entity-replay", "tools/environment-geometry"]
+pythonpath = ["."]
+addopts = "-p no:cacheprovider"

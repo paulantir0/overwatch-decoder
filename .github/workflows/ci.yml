@@ -1,0 +1,59 @@
+name: ci
+
+# Manual for now: GitHub-hosted minutes are exhausted until they reset, and no
+# self-hosted runner is registered for this repository. Add `push` and
+# `pull_request` triggers once either is available.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  portable:
+    name: python ${{ matrix.python }} + node
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Verification gate
+        env:
+          PYTHON: python
+        run: scripts/check.sh
+
+  windows:
+    name: native observer and recorder
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build self-contained observer
+        run: dotnet publish windows/Observer/Observer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:BuildRevision=${{ github.sha }} -o .runs/windows-ci
+      - name: Read-only child-process and snapshot self-test
+        run: ./.runs/windows-ci/overwatch-decoder-observer.exe self-test
+      - name: Recorder tests and build
+        run: |
+          dotnet run --project windows/SessionRecorder.Tests/InputAudioTests.csproj -c Release
+          dotnet run --project windows/SessionRecorder.VideoTests/VideoTests.csproj -c Release
+          dotnet run --project windows/SessionRecorder.CoreTests/CoreTests.csproj -c Release
+          dotnet publish windows/SessionRecorder/SessionRecorder.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:BuildRevision=${{ github.sha }} -o .runs/capture-ci

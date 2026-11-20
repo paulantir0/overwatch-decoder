@@ -1,0 +1,69 @@
+settings
+{
+    main
+    {
+        Mode Name: "Chamber coordinate registration"
+    }
+
+    lobby
+    {
+        Max Team 1 Players: 1
+        Max Team 2 Players: 0
+    }
+
+    modes
+    {
+        Skirmish
+        {
+            enabled maps
+            {
+                Workshop Chamber
+            }
+        }
+    }
+}
+
+variables
+{
+    global:
+        0: OverwatchDecoderDone
+        1: OverwatchDecoderTarget
+        2: OverwatchDecoderPoints
+        3: OverwatchDecoderIndex
+}
+
+rule("Overwatch Decoder Chamber coordinate registration")
+{
+    event
+    {
+        Ongoing - Each Player;
+        All;
+        All;
+    }
+
+    conditions
+    {
+        Current Map == Map(Workshop Chamber);
+        Event Player == Host Player;
+        Has Spawned(Event Player) == True;
+        Is Button Held(Event Player, Button(Interact)) == True;
+        Global.OverwatchDecoderDone == False;
+    }
+
+    actions
+    {
+        Global.OverwatchDecoderDone = True;
+        Global.OverwatchDecoderPoints = Array(Vector(0, 0, 0), Vector(5, 0, 0), Vector(0, 0, 5), Vector(0, 3, 0), Vector(5, 3, 5));
+        Global.OverwatchDecoderTarget = Global.OverwatchDecoderPoints[0];
+        Start Forcing Player Position(Event Player, Global.OverwatchDecoderTarget, True);
+        Log To Inspector(Custom String("OWDR1 MAP {0} START 5", Current Map));
+        For Global Variable(OverwatchDecoderIndex, 0, 5, 1);
+            Global.OverwatchDecoderTarget = Global.OverwatchDecoderPoints[Global.OverwatchDecoderIndex];
+            Wait(2, Ignore Condition);
+            Log To Inspector(Custom String("OWDR1 INDEX {0} POSITION {1} EYE {2}", Global.OverwatchDecoderIndex, Position Of(Event Player), Eye Position(Event Player)));
+            Wait(2, Ignore Condition);
+        End;
+        Stop Forcing Player Position(Event Player);
+        Log To Inspector(Custom String("OWDR1 DONE 5"));
+    }
+}

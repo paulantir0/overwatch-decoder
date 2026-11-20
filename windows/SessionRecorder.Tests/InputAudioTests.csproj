@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <DefineConstants>$(DefineConstants);CAPTURE_PORTABLE_TEST</DefineConstants>
+    <!-- This harness exercises decoders and synthetic audio queues only, never a WASAPI device. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../SessionRecorder/InputCapture.cs" Link="InputCapture.cs" />
+    <Compile Include="../SessionRecorder/LoopbackAudioCapture.cs" Link="LoopbackAudioCapture.cs" />
+    <PackageReference Include="NAudio.Wasapi" Version="3.3.0" />
+  </ItemGroup>
+</Project>

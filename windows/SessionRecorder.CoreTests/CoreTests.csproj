@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../SessionRecorder/EventJournal.cs" Link="EventJournal.cs" />
+    <Compile Include="../SessionRecorder/RosterCapture.cs" Link="RosterCapture.cs" />
+    <Compile Include="../SessionRecorder/CaptureSettings.cs" Link="CaptureSettings.cs" />
+    <Compile Include="../SessionRecorder/ObservationCapture.cs" Link="ObservationCapture.cs" />
+    <Compile Include="../SessionRecorder/ObservationStorageTail.cs" Link="ObservationStorageTail.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Fixtures/cohort_producer.py" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

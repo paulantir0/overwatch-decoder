@@ -1,0 +1,123 @@
+settings
+{
+	main
+	{
+		Mode Name: "Tracer outgoing-hit validation"
+	}
+	lobby
+	{
+		Max Team 1 Players: 1
+		Max Team 2 Players: 1
+	}
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Chamber
+			}
+		}
+	}
+	heroes
+	{
+		Team 1
+		{
+			enabled heroes
+			{
+				Tracer
+			}
+		}
+	}
+}
+
+variables {
+    global:
+        0: OverwatchDecoderStarted
+        1: OverwatchDecoderActive
+        2: OverwatchDecoderHost
+        3: OverwatchDecoderAshe
+        4: OverwatchDecoderDealt
+        5: OverwatchDecoderTaken
+}
+
+//Strict optimizations enabled
+rule ("Overwatch Decoder start one outgoing-hit fixture") {
+    event {
+        Ongoing - Each Player;
+        Team 1;
+        All;
+    }
+    conditions {
+        Current Map == Map(Workshop Chamber);
+        Event Player == Host Player;
+        Has Spawned(Event Player) == True;
+        Hero Of(Event Player) == Hero(Tracer);
+        Is Button Held(Event Player, Button(Interact)) == True;
+        Global.OverwatchDecoderStarted == False;
+    }
+    actions {
+        Set Global Variable(OverwatchDecoderStarted, True);
+        Set Global Variable(OverwatchDecoderHost, Event Player);
+        Create Dummy Bot(Hero(Ashe), Team 2, -1, Vector(3, 0, 0), Right);
+        Set Global Variable(OverwatchDecoderAshe, Last Created Entity);
+        If(Compare(Global.OverwatchDecoderAshe, ==, Null));
+            Log To Inspector(Custom String("OWDH1 START_FAILED no dummy"));
+            Abort;
+        End;
+        Set Primary Fire Enabled(Global.OverwatchDecoderAshe, False);
+        Set Secondary Fire Enabled(Global.OverwatchDecoderAshe, False);
+        Start Forcing Player Position(Event Player, Vector(0, 0, 0), False);
+        Start Forcing Player Position(Global.OverwatchDecoderAshe, Vector(3, 0, 0), False);
+        Set Facing(Event Player, Left, To World);
+        Wait(1, Ignore Condition);
+        If(And(Has Spawned(Global.OverwatchDecoderAshe), Compare(Hero Of(Global.OverwatchDecoderAshe), ==, Hero(Ashe))));
+            Set Global Variable(OverwatchDecoderActive, True);
+            Log To Inspector(Custom String("OWDH1 READY MAP {0} TRACER {1} ASHE {2}", Current Map, Position Of(Event Player), Position Of(Global.OverwatchDecoderAshe)));
+            Wait(60, Ignore Condition);
+        Else;
+            Log To Inspector(Custom String("OWDH1 START_FAILED Ashe not spawned"));
+        End;
+        Set Global Variable(OverwatchDecoderActive, False);
+        Stop Forcing Player Position(Event Player);
+        Destroy Dummy Bot(Team 2, Slot Of(Global.OverwatchDecoderAshe));
+        Log To Inspector(Custom String("OWDH1 DONE DEALT {0} TAKEN {1}", Global.OverwatchDecoderDealt, Global.OverwatchDecoderTaken));
+    }
+}
+
+rule ("Overwatch Decoder log host dealt damage") {
+    event {
+        Player Dealt Damage;
+        Team 1;
+        All;
+    }
+    conditions {
+        Global.OverwatchDecoderActive == True;
+        Attacker == Global.OverwatchDecoderHost;
+        Victim == Global.OverwatchDecoderAshe;
+        Global.OverwatchDecoderDealt < 64;
+    }
+    actions {
+        Modify Global Variable(OverwatchDecoderDealt, Add, 1);
+        Log To Inspector(Custom String("OWDH1 DEALT {0} DAMAGE {1} ATTACKER {2}", Global.OverwatchDecoderDealt, Event Damage, Custom String("{0} HERO {1} POS {2}", Attacker, Hero Of(Attacker), Position Of(Attacker))));
+        Log To Inspector(Custom String("OWDH1 DEALT {0} VICTIM {1} HERO {2}", Global.OverwatchDecoderDealt, Victim, Custom String("{0} POS {1}", Hero Of(Victim), Position Of(Victim))));
+    }
+}
+
+rule ("Overwatch Decoder log host or dummy took damage") {
+    event {
+        Player Took Damage;
+        All;
+        All;
+    }
+    conditions {
+        Global.OverwatchDecoderActive == True;
+        Or(Compare(Victim, ==, Global.OverwatchDecoderHost), Compare(Victim, ==, Global.OverwatchDecoderAshe)) == True;
+        Global.OverwatchDecoderTaken < 64;
+    }
+    actions {
+        Modify Global Variable(OverwatchDecoderTaken, Add, 1);
+        Log To Inspector(Custom String("OWDH1 TAKEN {0} DAMAGE {1} ATTACKER {2}", Global.OverwatchDecoderTaken, Event Damage, Custom String("{0} HERO {1} POS {2}", Attacker, Hero Of(Attacker), Position Of(Attacker))));
+        Log To Inspector(Custom String("OWDH1 TAKEN {0} VICTIM {1} HERO {2}", Global.OverwatchDecoderTaken, Victim, Custom String("{0} POS {1}", Hero Of(Victim), Position Of(Victim))));
+    }
+}

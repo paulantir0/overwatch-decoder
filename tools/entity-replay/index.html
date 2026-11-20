@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Overwatch Replay</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23252523'/%3E%3Cpath d='M12 8L25 16L12 24Z' fill='white'/%3E%3C/svg%3E" />
+    <script src="theme.js"></script>
+    <link rel="stylesheet" href="style.css" />
+    <script src="model.js" defer></script>
+    <script src="evidence.js" defer></script>
+    <script src="environment.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header class="masthead">
+        <div class="brand">
+          <h1>Overwatch Replay</h1>
+        </div>
+        <label class="theme-picker" for="theme-preference">
+          <span>Theme</span>
+          <select id="theme-preference">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+      </header>
+
+      <section class="transport" aria-label="Shared replay timeline">
+        <div class="transport-row">
+          <div class="playback-buttons">
+            <button id="play" class="primary" disabled>Play</button>
+            <div class="step-buttons">
+              <button id="prev" type="button" title="Previous recorded sample" aria-label="Previous recorded sample">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4v8m8-8-5 4 5 4z" /></svg>
+              </button>
+              <button id="next" type="button" title="Next recorded sample" aria-label="Next recorded sample">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12 4v8M4 4l5 4-5 4z" /></svg>
+              </button>
+            </div>
+            <div class="time-readout"><output id="clock">00:00.00</output><span id="duration"></span></div>
+          </div>
+          <div class="speed-control">
+            <button id="save-frame" disabled>Frame JSON</button>
+            <label for="speed">Speed</label>
+            <select id="speed">
+              <option value="0.25">0.25×</option>
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="2">2×</option>
+              <option value="4">4×</option>
+            </select>
+          </div>
+        </div>
+        <div class="timeline">
+          <canvas id="coverage" aria-hidden="true"></canvas>
+          <input id="time" type="range" min="0" max="1" step="0.001" value="0" aria-label="Replay time" disabled />
+        </div>
+        <div class="timeline-labels">
+          <span id="timeline-start">00:00</span>
+          <span class="coverage-key"><i aria-hidden="true"></i> Recorded positions <span>·</span> Blank intervals are gaps</span>
+          <span id="timeline-end">—</span>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="Replay workspace">
+        <div class="scene-panel">
+          <div class="comparison" id="comparison">
+            <section class="video-panel" id="video-panel" hidden aria-labelledby="video-title">
+              <div class="video-toolbar">
+                <h2 id="video-title" class="scene-title">Gameplay</h2>
+                <div class="video-actions">
+                  <span id="video-clock">—</span>
+                </div>
+              </div>
+              <div class="video-wrap" id="video-wrap">
+                <video id="gameplay" preload="metadata" muted playsinline
+                  aria-label="Saved gameplay linked to the shared timeline"></video>
+                <div id="video-message" class="video-message">Loading video…</div>
+              </div>
+              <details class="pane-settings">
+                <summary>Video timing</summary>
+                <div class="video-sync">
+                  <label for="video-offset">Video starts at</label>
+                  <input id="video-offset" type="number" step="0.05" min="-3600" max="3600" value="0" />
+                  <span>s</span>
+                  <button id="reset-sync" title="Reset to the recording's initial alignment">Reset</button>
+                  <p id="sync-note">Adjust the offset to line up the same movement.</p>
+                </div>
+              </details>
+            </section>
+
+            <section class="object-panel" aria-labelledby="scene-title">
+              <div class="scene-toolbar">
+                <h2 id="scene-title" class="scene-title">Coordinate view</h2>
+                <div class="view-tools">
+                  <button id="view" aria-pressed="false">Top view</button>
+                  <button id="fit">Fit objects</button>
+                  <button id="expand-map" aria-pressed="false" aria-label="Toggle expanded coordinate view">Expand</button>
+                </div>
+              </div>
+              <div class="canvas-wrap" id="canvas-wrap">
+                <canvas id="scene" tabindex="0"
+                  aria-label="3D figures at recorded XYZ coordinates. Click to focus. WASD moves, Q and E change height, right-drag looks, middle-drag pans, and the wheel zooms. F fits objects."></canvas>
+                <div class="scene-topline">
+                  <span id="sample-state" class="state-badge">Loading capture</span>
+                  <span id="epoch-label"></span>
+                </div>
+                <div id="scene-message" class="scene-message">
+                  <h3 id="message-title">Opening the recording</h3>
+                  <p id="message-detail">Loading saved positions…</p>
+                  <button id="next-data" hidden>Jump to next recorded sample</button>
+                </div>
+              </div>
+              <div class="scene-footer" aria-label="Team legend">
+                <span><i class="legend-self" aria-hidden="true"></i> You</span>
+                <span><i class="legend-object legend-ally" aria-hidden="true"></i> Ally</span>
+                <span><i class="legend-object legend-enemy" aria-hidden="true"></i> Enemy</span>
+                <span><i class="legend-object" aria-hidden="true"></i> Unknown</span>
+              </div>
+              <div class="orientation-controls">
+                <button id="your-pov" type="button" class="pov-toggle" aria-pressed="false" title="Toggle your camera POV">Your POV</button>
+                <button id="self-sightline" type="button" class="sightline-toggle" aria-pressed="true" title="Show your recorded facing direction as a dot in your POV or a line from outside. Exact camera aim is not yet calibrated.">Aim line: On</button>
+              </div>
+              <div class="orientation-controls">
+                <label for="camera-mode">Camera</label>
+                <select id="camera-mode" aria-label="Camera mode">
+                  <option value="free">Free camera</option>
+                  <option value="self">Your POV preview</option>
+                  <option value="selected">Selected player POV</option>
+                </select>
+                <span id="roster-source-control" hidden>
+                  <label for="roster-source">Recorded roster source</label>
+                  <select id="roster-source" title="Sources are sampled independently. Slots may change as actors enter or leave.">
+                    <option value="roster-00">Source 1</option>
+                    <option value="roster-01">Source 2</option>
+                  </select>
+                </span>
+              </div>
+              <details class="pane-settings">
+                <summary>Overlays and camera controls</summary>
+                <div class="orientation-controls motion-controls">
+                  <label><input type="checkbox" id="trails" checked /> Trails</label>
+                  <label><input type="checkbox" id="follow" /> Follow you</label>
+                  <label><input type="checkbox" id="smooth-motion" checked /> Smooth motion</label>
+                  <label title="Vertical distance from the reference floor, in recorded coordinate units"><input type="checkbox" id="height-guides" checked /> Height labels</label>
+                  <label id="map-surfaces-control" hidden><input type="checkbox" id="map-surfaces" aria-describedby="map-surfaces-note" checked /> Map surfaces</label>
+                  <label title="Bars scale to the highest recorded HP for this body and hero"><input type="checkbox" id="player-labels" checked /> Health bars and HP</label>
+                  <label title="Shown when consecutive recorded health samples reach zero"><input type="checkbox" id="health-bursts" checked /> Shatter at 0 HP</label>
+                </div>
+                <p id="map-surfaces-note" class="camera-help" hidden></p>
+                <p class="camera-help"><kbd>WASD</kbd> Move · Right-drag look · Middle-drag pan · Wheel zoom</p>
+              </details>
+              <p id="view-note" class="view-note">Noses show recorded facing. Height is measured from the reference floor.</p>
+            </section>
+          </div>
+        </div>
+
+        <aside class="inspector" aria-label="Object inspector">
+          <div class="object-index">
+            <div class="inspector-heading">
+              <h2>Objects in this sample</h2>
+              <span id="active-count">0</span>
+            </div>
+            <div id="object-list" class="object-list" aria-label="Recorded objects"></div>
+          </div>
+          <div class="selected-object">
+            <p class="eyebrow">Selected object</p>
+            <h3 id="selected-label">Select a player</h3>
+            <p id="selected-description">Select a player in the scene or an object in the list.</p>
+            <p id="user-suggestion" hidden></p>
+            <button id="view-selected" type="button" disabled>View from this player</button>
+            <div class="coordinates">
+              <div><span>X</span><output id="pos-x">—</output></div>
+              <div><span>Y</span><output id="pos-y">—</output></div>
+              <div><span>Z</span><output id="pos-z">—</output></div>
+            </div>
+            <dl>
+              <dt>Hero</dt><dd id="identity-hero">Unknown</dd>
+              <dt>Team</dt><dd id="identity-team">Unknown</dd>
+              <dt>Player name</dt><dd id="identity-name">Unknown</dd>
+              <dt>Position</dt><dd id="position-status">No sample</dd>
+              <dt>Facing</dt><dd id="facing-status">Unknown</dd>
+              <dt title="Y minus the reference floor; terrain height is not recorded">Height above floor</dt><dd id="reference-height">—</dd>
+              <dt id="health-label">Health observation</dt><dd id="health-candidate">Unavailable</dd>
+            </dl>
+            <progress id="selected-health-bar" class="health-bar" max="1" value="0" hidden aria-label="Health relative to highest recorded HP"></progress>
+            <p id="health-scale" class="health-scale" hidden></p>
+            <p id="identity-status" class="identity-status"></p>
+            <div id="identity-evidence" class="evidence-links"></div>
+            <details>
+              <summary>Object and sample provenance</summary>
+              <p id="provenance">Choose an object.</p>
+            </details>
+          </div>
+          <details class="combat-timeline">
+            <summary>Damage and source observations</summary>
+            <p>Orange marks outgoing feedback. Purple marks observed incoming sources. Exact impact times, hit counts, and damage remain unknown.</p>
+            <div id="damage-events" aria-live="polite"></div>
+          </details>
+        </aside>
+      </section>
+
+      <section id="roster-panel" class="roster-panel" hidden aria-labelledby="roster-title">
+        <div class="roster-heading">
+          <h2 id="roster-title">Identified in the recording</h2>
+          <button id="save-labels">Labels JSON</button>
+        </div>
+        <p class="roster-help">Names and heroes seen in the footage. Choose a time to review the observation. Links to blocks require separate evidence.</p>
+        <div id="roster-list" class="roster-list"></div>
+      </section>
+      <footer>
+        <dl class="dataset-stats" aria-label="Observation counts">
+          <div><dt>Object records</dt><dd id="total-objects">—</dd></div>
+          <div><dt>Samples</dt><dd id="total-frames">—</dd></div>
+          <div><dt>Typical rate</dt><dd id="sample-rate">—</dd></div>
+        </dl>
+      </footer>
+    </main>
+  </body>
+</html>

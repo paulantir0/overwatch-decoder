@@ -1,0 +1,22 @@
+# Local recordings, exports and build output. Captures, profiles, recipes,
+# game files and memory dumps are private and never belong in this repository.
+.runs/
+artifacts/
+private/
+*.dmp
+*.mkv
+*.mp4
+*.wav
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# .NET
+windows/**/bin/
+windows/**/obj/

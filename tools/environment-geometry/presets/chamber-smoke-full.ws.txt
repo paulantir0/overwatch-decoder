@@ -1,0 +1,65 @@
+settings
+{
+    main
+    {
+        Mode Name: "Chamber surface survey"
+    }
+
+    lobby
+    {
+        Max Team 1 Players: 1
+        Max Team 2 Players: 0
+    }
+
+    modes
+    {
+        Skirmish
+        {
+            enabled maps
+            {
+                Workshop Chamber
+            }
+        }
+    }
+}
+
+variables
+{
+    global:
+        0: OverwatchDecoderDone
+        1: OverwatchDecoderStart
+        2: OverwatchDecoderEnd
+        3: OverwatchDecoderHit
+        4: OverwatchDecoderNormal
+}
+
+rule("Overwatch Decoder Chamber ray survey smoke test")
+{
+    event
+    {
+        Ongoing - Each Player;
+        All;
+        All;
+    }
+
+    conditions
+    {
+        Current Map == Map(Workshop Chamber);
+        Event Player == Host Player;
+        Has Spawned(Event Player) == True;
+        Is Button Held(Event Player, Button(Interact)) == True;
+        Global.OverwatchDecoderDone == False;
+    }
+
+    actions
+    {
+        Global.OverwatchDecoderDone = True;
+        Global.OverwatchDecoderStart = Eye Position(Event Player);
+        Global.OverwatchDecoderEnd = Global.OverwatchDecoderStart + Facing Direction Of(Event Player) * 25;
+        Global.OverwatchDecoderHit = Ray Cast Hit Position(Global.OverwatchDecoderStart, Global.OverwatchDecoderEnd, Empty Array, Empty Array, False);
+        Global.OverwatchDecoderNormal = Ray Cast Hit Normal(Global.OverwatchDecoderStart, Global.OverwatchDecoderEnd, Empty Array, Empty Array, False);
+        Log To Inspector(Custom String("OWD1 MAP {0} PLAYER {1}", Current Map, Position Of(Event Player)));
+        Log To Inspector(Custom String("OWD1 RAY {0} END {1} HIT {2}", Global.OverwatchDecoderStart, Global.OverwatchDecoderEnd, Global.OverwatchDecoderHit));
+        Log To Inspector(Custom String("OWD1 NORMAL {0}", Global.OverwatchDecoderNormal));
+    }
+}

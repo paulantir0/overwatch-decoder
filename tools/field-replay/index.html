@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Field replay · local research viewer</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="model.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><div><p class="eyebrow">LOCAL RESEARCH VIEWER</p><h1>Field replay<span>.</span></h1><p class="muted">Explore recorded samples on their own timeline.</p></div>
+      <label class="open">Open JSONL<input id="file" type="file" accept=".jsonl,application/x-ndjson,text/plain"></label>
+    </header>
+    <div class="notice"><strong>Research · non-atomic · partial state</strong><span>Raw field names and values. No map, entity or ability interpretation.</span></div>
+    <p id="message" role="status" aria-live="polite">Choose a compact overwatch-decoder.field-timeline/1 export. Your file stays in this browser.</p>
+    <section class="workspace">
+      <div class="plot-panel">
+        <div class="plot-toolbar"><label>Vector field<select id="field" disabled><option>Open a recording</option></select></label><label>Projection<select id="plane" disabled><option>XZ</option><option>XY</option><option>YZ</option></select></label></div>
+        <div class="canvas-wrap"><canvas id="plot" aria-label="Projection of recorded vector samples"></canvas><p id="empty">Your recorded trace appears here</p></div>
+        <div class="plot-caption"><span id="axes">Components only · units unknown</span><span>Full trace · marker = selected sample</span></div>
+      </div>
+      <aside>
+        <p class="eyebrow">SELECTED SAMPLE</p><h2 id="sample-time">—</h2><p id="sample-id" class="muted">No recording loaded</p>
+        <div class="fact"><span>Vector</span><code id="vector-value">—</code></div>
+        <div class="fact"><span>Status</span><strong id="vector-status">—</strong></div>
+        <div class="fact"><span>Recorded read bracket</span><code id="read-interval">—</code></div>
+        <div class="fact"><span>Frame ticks</span><code id="frame-interval">—</code></div>
+        <p id="gap" class="gap">Recorded samples only. No interpolation or estimated values.</p>
+      </aside>
+    </section>
+    <section class="transport" aria-label="Replay controls">
+      <div class="buttons"><button id="previous" disabled aria-label="Previous sample">←</button><button id="play" disabled>Play</button><button id="next" disabled aria-label="Next sample">→</button><label class="speed">Speed<select id="speed" disabled><option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
+      <label class="scrub-label" for="scrub">Recorded frame <span id="frame-label">—</span></label><input id="scrub" type="range" min="0" max="0" value="0" step="1" disabled>
+      <div class="timeline-labels"><span id="begin">—</span><span id="end">—</span></div>
+    </section>
+    <section class="overview"><div><span>Frames retained</span><strong id="count">—</strong></div><div><span>Missed scheduled slots</span><strong id="missed">—</strong></div><div><span>Unknown field samples</span><strong id="unknowns">—</strong></div><div><span>Export completion</span><strong id="completion">—</strong></div></section>
+    <details><summary>All fields at this sample</summary><div class="table-wrap"><table><thead><tr><th>Raw field name</th><th>Status</th><th>Recorded value</th></tr></thead><tbody id="values"></tbody></table></div></details>
+    <details><summary>Provenance & limits</summary><p>Compact exports omit guard and storage-route evidence. This viewer validates structure and timestamps; it does not re-verify the original recording or establish gameplay meanings or visibility. A joined trace does not prove unchanged object identity.</p><dl id="provenance"></dl><p>Import bounds: 128 MiB file, 256 KiB per line, 100,000 frames, 128 fields, 1,000,000 field samples, 32 MiB retained numeric payload. Browser object overhead is additional. A limit failure rejects the whole import; samples are never silently dropped.</p><p>Open this HTML file directly. No server, network requests, external libraries or telemetry. Keep this folder’s files together.</p></details>
+    <footer>Values are observations, not a reconstructed world.</footer>
+  </main>
+</body>
+</html>
